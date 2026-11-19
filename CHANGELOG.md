@@ -19,3 +19,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [S
   - **iOS:** `UIPrintInteractionController` (`mob_print_nif.m`) presenting the
     PDF file URL via `printingItem` (centred popover on iPad, modal sheet on
     iPhone).
+
+### Verified
+
+- Android, moto e 2020 (Android 10, armeabi-v7a), in Humdinger: Print opens
+  the system print preview with the phrase's sheet music.
+- iOS, iPhone 17 simulator (iOS 27.0) and a physical iPhone SE 3rd gen
+  (iOS 27.0.1, signed development build), in a throwaway mob.new 0.6.19 host:
+  `MobPrint.pdf/2` returns `:ok` and opens the print sheet with Humdinger's
+  sheet-music PDF ("Page 1 of 1"); cancelling it leaves the app responsive.
