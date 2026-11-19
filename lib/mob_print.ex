@@ -80,6 +80,9 @@ defmodule MobPrint do
   @typedoc "Error reasons returned by `pdf/2`."
   @type reason :: :not_found | :no_activity | :no_app | :failed | :unsupported
 
+  # The Android bridge copies each string into a 4096-unit buffer.
+  @max_bytes 4096
+
   @doc """
   Hands the PDF file at `path` to the system print dialog.
 
@@ -91,10 +94,11 @@ defmodule MobPrint do
     * `:title` — job name shown in the system print dialog and spooler.
       Defaults to `Path.rootname(Path.basename(path))`. Must be a binary.
 
-  Raises `ArgumentError` if `path` or `:title` is not a binary, or if an
-  unknown option is provided.
+  Raises `ArgumentError` if `path` or `:title` is not a valid UTF-8 binary of
+  at most #{@max_bytes} bytes (the Android bridge's limit), or if an unknown
+  option is provided.
   """
-  @spec pdf(Path.t(), keyword()) :: :ok | {:error, reason()}
+  @spec pdf(String.t(), keyword()) :: :ok | {:error, reason()}
   def pdf(path, opts \\ []) do
     validate_path!(path)
     opts = Keyword.validate!(opts, [:title])
@@ -108,10 +112,18 @@ defmodule MobPrint do
     end
   end
 
-  defp validate_path!(path) when is_binary(path), do: :ok
+  defp validate_path!(path), do: validate_text!(path, "path")
 
-  defp validate_path!(other) do
-    raise ArgumentError, "expected path to be a binary, got: #{inspect(other)}"
+  defp validate_text!(text, what) when is_binary(text) and byte_size(text) <= @max_bytes do
+    if String.valid?(text),
+      do: :ok,
+      else: raise(ArgumentError, "expected #{what} to be valid UTF-8, got: #{inspect(text)}")
+  end
+
+  defp validate_text!(other, what) do
+    raise ArgumentError,
+          "expected #{what} to be a UTF-8 binary of at most #{@max_bytes} bytes, " <>
+            "got: #{inspect(other, limit: 5, printable_limit: 64)}"
   end
 
   defp resolve_title!(path, opts) do
@@ -119,11 +131,9 @@ defmodule MobPrint do
       :error ->
         Path.rootname(Path.basename(path))
 
-      {:ok, title} when is_binary(title) ->
+      {:ok, title} ->
+        validate_text!(title, ":title")
         title
-
-      {:ok, other} ->
-        raise ArgumentError, "expected :title to be a binary, got: #{inspect(other)}"
     end
   end
 end

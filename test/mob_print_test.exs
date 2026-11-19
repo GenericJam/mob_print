@@ -125,5 +125,19 @@ defmodule MobPrintTest do
         MobPrint.pdf(:not_a_path)
       end
     end
+
+    @tag :tmp_dir
+    test "raises on a title that isn't UTF-8 or is longer than 4096 bytes", %{tmp_dir: dir} do
+      pdf = Path.join(dir, "score.pdf")
+      File.write!(pdf, "%PDF-1.4\n%%EOF\n")
+
+      assert_raise ArgumentError, ~r/valid UTF-8/, fn -> MobPrint.pdf(pdf, title: <<0xFF>>) end
+
+      assert_raise ArgumentError, ~r/4096 bytes/, fn ->
+        MobPrint.pdf(pdf, title: String.duplicate("a", 4097))
+      end
+
+      assert MobPrint.pdf(pdf, title: String.duplicate("a", 4096)) == {:error, :unsupported}
+    end
   end
 end
